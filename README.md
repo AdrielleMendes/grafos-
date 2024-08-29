@@ -1,73 +1,129 @@
-# grafos-
+from ssl import _PasswordType
+from tkinter import Button, Entry, Label, Tk, messagebox
+import sqlite3
+import random
 
-import networkx as nx
-import matplotlib.pyplot as plt
+def banco():
+    conexao = sqlite3.connect('usuarios.db')
+    cursor = conexao.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clientes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            senha TEXT NOT NULL
+        )
+    ''')
+    conexao.commit()
+    conexao.close()
 
-def dijkstra(grafo, origem):
-    inf = float('inf')
+def verificar_usuario(email, senha):
+    conexao = sqlite3.connect('usuarios.db')
+    cursor = conexao.cursor()
+    cursor.execute('SELECT * FROM clientes WHERE email = ? AND senha = ?', (email, senha))
+    usuario = cursor.fetchone()
+    conexao.close()
+    return usuario
+
+def login():
+    email = email.get()
+    senha = senha.get()
+ 
+    if not email or not senha:
+        messagebox.showwarning("Campos obrigatórios", "Por favor, preencha todos os campos.")
+        return
+
+    usuario = verificar_usuario(email, senha)
+    if usuario:
+        messagebox.showinfo("Login", "Usuário autenticado com sucesso!")
+    else:
+        messagebox.showerror("Erro", "Usuário não encontrado ou senha incorreta.")
+
+def appLogin():
+    tela = Tk()
+    tela.title("Login")
+    tela.geometry("350x350")
+
+    texto2 = Label(tela, text="Tela de Login", font=('Helvetica', 18, 'bold'))
+    texto2.pack(padx=3, pady=3)
     
-    distancias = {no: inf for no in grafo}
-    predecessores = {no: 'und' for no in grafo}
-    Q = {no for no in grafo}
+    txt_email = Label(tela, text="E-MAIL", font=('Helvetica', 16))
+    txt_email.pack(padx=5, pady=5)
+    campo_email = Entry(tela, width=35)
+    campo_email.pack(padx=5, pady=5)
+
+    txt_senha = Label(tela, text="SENHA", font=('Helvetica', 16))
+    txt_senha.pack(padx=5, pady=5)
+    campo_senha = Entry(tela, width=35, show="*")
+    campo_senha.pack(padx=5, pady=5)
+
     
-    distancias[origem] = 0
-    predecessores[origem] = origem
 
-    while len(Q) > 0:
-        S = inf
-        for no in Q:
-            if distancias[no] < S:
-                S = distancias[no]
-                vertice_atual = no
-                
-        Q.remove(vertice_atual)
+
+
+tela = Tk()
+tela.title("Recuperar Senha")
+tela.geometry("350x250")
+txt_email = Label(tela, text="E-MAIL", font=('Helvetica', 16))
+txt_email.pack(padx=10, pady=5)
+campo_email = Entry(tela, width=35)
+campo_email.pack(padx=10, pady=5)
+
+txt_codigo = Label(tela, text="CÓDIGO DE VERIFICAÇÃO", font=('Helvetica', 16))
+txt_codigo.pack(padx=10, pady=5)
+campo_codigo = Entry(tela, width=35)
+campo_codigo.pack(padx=10, pady=5)
+
+txt_nova_senha = Label(tela, text="NOVA SENHA", font=('Helvetica', 16))
+txt_nova_senha.pack(padx=10, pady=5)
+campo_nova_senha = Entry(tela, width=35, show="*")
+campo_nova_senha.pack(padx=10, pady=5)
+
+txt_confirma_senha = Label(tela, text="CONFIRMAR SENHA", font=('Helvetica', 16))
+txt_confirma_senha.pack(padx=10, pady=5)
+campo_confirma_senha = Entry(tela, width=35, show="*")
+campo_confirma_senha.pack(padx=10, pady=5)
+
+def enviar_codigo():
+    email = campo_email.get()
+    user = email(email)
+    
+    if user:
+        codigo = str(random.randint(100000, 999999))
         
-        for vizinho, peso in grafo[vertice_atual].items():
-            alt = distancias[vertice_atual] + peso
-            if alt < distancias[vizinho]:
-                distancias[vizinho] = alt
-                predecessores[vizinho] = vertice_atual
-                
-    return distancias, predecessores
-
-grafo = {'A': {'B': 1, 'C': 4},
-         'B': {'A': 1, 'C': 1, 'D': 3, 'E': 5},
-         'C': {'A': 4, 'B': 1, 'D': 2, 'E': 3},
-         'D': {'B': 3, 'C': 2, 'E': 2},
-         'E': {'B': 5, 'C': 3, 'D': 2}}
-origem = 'A'
-dist, prev = dijkstra(grafo, origem)
-print(dist)
-print("----------------------------")
-print(prev)
-
-def caminho(origem, V):
-    melhor_caminho = []
-    melhor_caminho.append(V)
-    predecessor = prev[V]
-    melhor_caminho.append(predecessor)
-    while predecessor != origem:
-        predecessor = prev[predecessor]
-        melhor_caminho.append(predecessor)
-          
-    return sorted(melhor_caminho, reverse=True)
-T = caminho(origem, 'E')
-print("-----------------")
-print(T)
-
-G = nx.Graph(grafo)
-
-for no in grafo:
-    for vizinho, peso in grafo[no].items():
-        G.add_edge(no, vizinho, weight=peso)
+        print(f"Código de verificação para {email}: {codigo}")
         
-pos = nx.circular_layout(G)
+        tela.codigo_recuperacao = codigo
+        tela.email_recuperacao = email
+        messagebox.showinfo("Código Enviado", "Código de verificação enviado. Verifique seu e-mail.")
+    else:
+        messagebox.showerror("Erro", "Email não encontrado.")
+    
+def atualizar_senha():
+    codigo_digitado = campo_codigo.get()
+    nova_senha = campo_nova_senha.get()
+    confirmar_senha = campo_confirma_senha.get()
+    
+    if codigo_digitado == getattr(tela, 'codigo_recuperacao', ''):
+        if nova_senha == confirmar_senha:
+            _PasswordType(tela.email_recuperacao, nova_senha)
+            messagebox.showinfo("Senha Atualizada", "Senha atualizada com sucesso!")
+            tela.destroy()
+        else:
+            messagebox.showerror("Erro", "A nova senha e a confirmação não coincidem.")
+    else:
+        messagebox.showerror("Erro", "Código de verificação inválido.")
+    
+botao_enviar_codigo = Button(tela, text="Enviar Código", command=enviar_codigo, font=('Helvetica', 14))
+botao_enviar_codigo.pack(padx=10, pady=10)
 
-nx.draw_networkx_nodes(G, pos)
-nx.draw_networkx_labels(G, pos)
-nx.draw_networkx_edges(G, pos)
-edge_labels = nx.get_edge_attributes(G, "weight")
-nx.draw_networkx_edge_labels(G, pos, edge_labels)
-plt.show()
+botao_atualizar_senha = Button(tela, text="Atualizar Senha", command=atualizar_senha, font=('Helvetica', 14))
+botao_atualizar_senha.pack(padx=10, pady=10)
+
+tela.mainloop()
+
+
+
+banco()
+appLogin()
 
 
